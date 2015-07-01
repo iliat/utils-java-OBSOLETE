@@ -1,5 +1,6 @@
 package com.google.cloud.genomics.grpc;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genomics.v1.ReferenceServiceV1Grpc;
 import com.google.genomics.v1.ReferenceServiceV1Grpc.ReferenceServiceV1BlockingStub;
 import com.google.genomics.v1.ReferenceSet;
@@ -11,11 +12,39 @@ import com.google.genomics.v1.StreamingVariantServiceGrpc;
 import com.google.genomics.v1.StreamingVariantServiceGrpc.StreamingVariantServiceBlockingStub;
 
 import io.grpc.Channel;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 
 public class Example {
+  private static GoogleCredentials getCreds() throws FileNotFoundException, IOException {
+    try {
+      String service_account_key_filename = "service_account_key.json";
+      GoogleCredentials creds = GoogleCredentials.fromStream(
+          new FileInputStream(service_account_key_filename));
+      creds = creds.createScoped(
+          Arrays.asList("https://www.googleapis.com/auth/genomics"));
+      return creds;
+    } catch (FileNotFoundException fex) {
+      System.out.println("Expecting to find service_account_key.json file in " + 
+          "this directory and use it for authentication.\n" +
+          "Please make sure your project is whitelisted for gRPC access and\n" +
+          "generate and download JSON key for your service account.\n" +
+          "You can do that in API & Auth section of the Developer Console.");
+      return null;
+    }
+  }
+  
   public static void main(String[] args) throws Exception {
-    Channel channel = Channels.fromDefaultCreds();
+    GoogleCredentials creds = getCreds();
+    if (creds == null) {
+      return;
+    }
+    
+    Channel channel = Channels.fromCreds(creds);
 
     // Regular RPC example: list all reference set assembly ids.
     ReferenceServiceV1BlockingStub refStub =
